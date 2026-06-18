@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SIDOO VM-Tippekonkurranse 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#080d1f 0%,#0d1535 100%);color:#fff;min-height:100vh}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.header{background:linear-gradient(90deg,#0d1535,#1a1f4a);padding:14px 16px 0;text-align:center;border-bottom:3px solid #cc1122}
+.tabs{display:flex;justify-content:center;gap:3px;flex-wrap:wrap;padding-bottom:0}
+.tab{padding:6px 10px;border-radius:6px 6px 0 0;border:none;cursor:pointer;font-size:11px;font-weight:700;transition:all .2s}
+.tab.active{background:#FFD700;color:#0a1628}
+.tab:not(.active){background:rgba(255,255,255,.1);color:#fff}
+.live-banner{background:linear-gradient(90deg,#8B0000,#cc0000);border-bottom:2px solid #ff4444;padding:8px 16px;display:none;align-items:center;justify-content:space-between}
+.live-banner.show{display:flex}
+.statusbar{background:rgba(204,17,34,.08);border-bottom:1px solid rgba(204,17,34,.2);padding:5px 16px;display:flex;justify-content:center;gap:16px;font-size:11px;flex-wrap:wrap}
+.content{max-width:600px;margin:0 auto;padding:12px}
+.view{display:none}.view.active{display:block}
+.card{border-radius:10px;margin-bottom:8px;overflow:hidden}
+.card-red{background:rgba(204,17,34,.12);border:1px solid rgba(255,215,0,.35)}
+.card-normal{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.card-gold{background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.35)}
+.card-live{background:rgba(180,0,0,.2);border:1px solid #ff4444}
+.card-top3{background:rgba(204,17,34,.1);border:1px solid rgba(255,215,0,.4)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:flex-end;justify-content:center;z-index:999}
+.modal-overlay.show{display:flex}
+.modal-center{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-center.show{display:flex}
+.modal-sheet{background:linear-gradient(180deg,#0f2a1a,#0a1628);border:1px solid rgba(255,215,0,.3);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto}
+.modal-box{background:#1a3a2a;border:2px solid #FFD700;border-radius:14px;padding:22px;width:300px}
+.modal-live{background:#1a0a0a;border:2px solid #ff4444;border-radius:14px;padding:22px;width:300px}
+.btn-gold{padding:10px;border-radius:7px;border:none;background:#FFD700;color:#0a1628;font-weight:700;cursor:pointer;flex:1}
+.btn-ghost{padding:10px 12px;border-radius:7px;border:1px solid #444;background:transparent;color:#aaa;cursor:pointer}
+.progress{background:rgba(0,0,0,.3);border-radius:4px;height:5px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .8s ease}
+input{background:#0a1628;border:1px solid #FFD700;border-radius:7px;color:#fff;padding:10px 12px;font-size:18px;font-weight:700;width:100%}
+.section-title{font-size:12px;color:#6b8f7a;font-weight:700;letter-spacing:1px;margin-bottom:10px}
+</style>
+<meta http-equiv="refresh" content="60">
+</head>
+<body>
+
+<div class="header">
+  <div style="font-size:13px;font-weight:900;letter-spacing:4px;color:#fff;margin-bottom:2px">⚽ SIDOO ⚽</div>
+  <div style="font-size:11px;color:#cc1122;font-style:italic;margin-bottom:4px;letter-spacing:1px">Sosial i Drammen og Omegn</div>
+  <div style="font-size:18px;font-weight:900;letter-spacing:2px;color:#FFD700;margin-bottom:10px">VM-TIPPEKONKURRANSE 2026</div>
+  <div class="tabs">
+    <button class="tab active" onclick="setView('tabell')">🏆 Tabell</button>
+    <button class="tab" onclick="setView('kamper')">⚽ Kamper</button>
+    <button class="tab" onclick="setView('odds')">📊 Folkeoraklet</button>
+    <button class="tab" onclick="setView('analyse')">📅 Dagens kamp</button>
+    <button class="tab" onclick="setView('fun')">💡 Fun facts</button>
+    <button class="tab" onclick="setView('race')">🔮 Hvem vinner?</button>
+  </div>
+</div>
+
+<div class="live-banner" id="liveBanner">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:18px;animation:pulse 1s infinite">🔴</span>
+    <div>
+      <div style="font-weight:800;font-size:14px" id="liveBannerKamp">LIVE</div>
+      <div style="font-size:22px;font-weight:900;color:#FFD700" id="liveBannerScore">0 – 0</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px">
+    <button onclick="openLiveEdit()" style="padding:6px 12px;border-radius:6px;border:none;background:#FFD700;color:#000;font-weight:700;cursor:pointer;font-size:13px">✏️ Oppdater</button>
+    <button onclick="lockCurrent()" style="padding:6px 10px;border-radius:6px;border:1px solid rgba(255,215,0,.4);background:rgba(255,215,0,.1);color:#FFD700;cursor:pointer;font-size:13px;font-weight:700">🔒 Lås</button>
+    <button onclick="avsluttLive()" style="padding:6px 10px;border-radius:6px;border:1px solid #ff6666;background:transparent;color:#ff9999;cursor:pointer;font-size:13px">✓ Slutt</button>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span>🎯 <b id="spillteSpan">0</b>/22 kamper</span>
+  <span>👥 <b>21</b> deltakere</span>
+  <span id="apiStatus" style="color:#FFD700">🔄 Henter...</span>
+  <button onclick="hentResultater()" style="background:transparent;border:1px solid #333;border-radius:4px;color:#666;padding:1px 8px;cursor:pointer;font-size:11px">↻</button>
+</div>
+
+<div class="content">
+  <div class="view active" id="view-tabell"><div id="tabellContent"></div></div>
+  <div class="view" id="view-kamper">
+    <div style="font-size:12px;color:#a8b5d5;margin-bottom:10px;text-align:center">🔒 Kun admin legger inn resultater · Appen oppdateres automatisk 🔄</div>
+    <div id="kamperContent"></div>
+  </div>
+  <div class="view" id="view-odds">
+    <div style="font-size:12px;color:#a8b5d5;margin-bottom:14px;text-align:center">Trykk på en kamp for å se hvem som tippet hva 👇</div>
+    <div id="oddsContent"></div>
+  </div>
+  <div class="view" id="view-analyse"><div id="analyseContent"></div></div>
+  <div class="view" id="view-fun"><div id="funContent"></div></div>
+  <div class="view" id="view-race"><div id="raceContent"></div></div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-center" id="editModal" onclick="closeEdit()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="font-weight:800;font-size:17px;color:#FFD700;margin-bottom:3px" id="editTitle"></div>
+    <div style="color:#a8d5b5;font-size:12px;margin-bottom:14px">Eks: H 2-1 eller bare B</div>
+    <input id="editInput" placeholder="H 2-1" onkeydown="if(event.key==='Enter')lagreEdit();if(event.key==='Escape')closeEdit()" style="margin-bottom:10px">
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button onclick="setTegn('H')" style="flex:1;padding:8px;border-radius:6px;border:1px solid #2E8B47;background:transparent;color:#fff;font-weight:700;cursor:pointer">H</button>
+      <button onclick="setTegn('U')" style="flex:1;padding:8px;border-radius:6px;border:1px solid #2E8B47;background:transparent;color:#fff;font-weight:700;cursor:pointer">U</button>
+      <button onclick="setTegn('B')" style="flex:1;padding:8px;border-radius:6px;border:1px solid #2E8B47;background:transparent;color:#fff;font-weight:700;cursor:pointer">B</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-gold" onclick="lagreEdit()">Lagre</button>
+      <button class="btn-ghost" onclick="slettEdit()">Slett</button>
+    </div>
+    <button onclick="closeEdit();startLive(editIdx)" style="width:100%;margin-top:8px;padding:9px;border-radius:7px;border:1px solid #ff4444;background:rgba(180,0,0,.2);color:#ff9999;font-weight:700;cursor:pointer;font-size:13px">🔴 Følg live i stedet</button>
+  </div>
+</div>
+
+<!-- LIVE MODAL -->
+<div class="modal-center" id="liveModal" onclick="closeLiveModal()">
+  <div class="modal-live" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <span style="font-size:18px;animation:pulse 1s infinite">🔴</span>
+      <div style="font-weight:800;font-size:17px;color:#ff6666" id="liveTitle">LIVE</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px">
+      <div style="text-align:center">
+        <div style="font-size:11px;color:#888;margin-bottom:4px" id="liveHomeTeam"></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button onclick="adj('h',-1)" style="width:32px;height:32px;border-radius:6px;border:1px solid #444;background:transparent;color:#fff;font-size:18px;cursor:pointer">−</button>
+          <div style="font-size:44px;font-weight:900;color:#FFD700;width:50px;text-align:center;line-height:1" id="liveH">0</div>
+          <button onclick="adj('h',1)" style="width:32px;height:32px;border-radius:6px;border:1px solid #444;background:transparent;color:#fff;font-size:18px;cursor:pointer">+</button>
+        </div>
+      </div>
+      <div style="font-size:30px;color:#555;font-weight:900">–</div>
+      <div style="text-align:center">
+        <div style="font-size:11px;color:#888;margin-bottom:4px" id="liveAwayTeam"></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button onclick="adj('b',-1)" style="width:32px;height:32px;border-radius:6px;border:1px solid #444;background:transparent;color:#fff;font-size:18px;cursor:pointer">−</button>
+          <div style="font-size:44px;font-weight:900;color:#FFD700;width:50px;text-align:center;line-height:1" id="liveB">0</div>
+          <button onclick="adj('b',1)" style="width:32px;height:32px;border-radius:6px;border:1px solid #444;background:transparent;color:#fff;font-size:18px;cursor:pointer">+</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <span style="color:#888;font-size:13px">⏱</span>
+      <input id="liveMin" placeholder="45" oninput="liveState.min=this.value;renderLiveBanner()" style="flex:1;font-size:16px;border-color:#444">
+      <span style="color:#888;font-size:13px">'</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-gold" onclick="closeLiveModal()">✓ OK</button>
+      <button onclick="lockCurrent();closeLiveModal()" style="padding:10px 12px;border-radius:7px;border:1px solid rgba(255,215,0,.4);background:rgba(255,215,0,.1);color:#FFD700;font-weight:700;cursor:pointer">🔒 Lås slutt</button>
+      <button onclick="avsluttLive();closeLiveModal()" style="padding:10px 12px;border-radius:7px;border:1px solid #ff4444;background:transparent;color:#ff9999;cursor:pointer;font-size:12px">🏁</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER MODAL -->
+<div class="modal-overlay" id="playerModal" onclick="closePlayer()">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div id="playerContent"></div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:16px;color:#2a2a4a;font-size:11px">
+  SIDOO · Sosial i Drammen og Omegn · VM-Tippekonkurranse 2026 · Premie sponset av Vikram 🍺
+</div>
+
+<script>
+const KAMPER=[
+  {id:1,kamp:"MEX–RSA",dato:"11/6",norge:false,apiH:"Mexico",apiA:"South Africa"},
+  {id:2,kamp:"CAN–BIH",dato:"12/6",norge:false,apiH:"Canada",apiA:"Bosnia"},
+  {id:3,kamp:"BRA–MAR",dato:"14/6",norge:false,apiH:"Brazil",apiA:"Morocco"},
+  {id:4,kamp:"NED–JPN",dato:"14/6",norge:false,apiH:"Netherlands",apiA:"Japan"},
+  {id:5,kamp:"ESP–CPV",dato:"15/6",norge:false,apiH:"Spain",apiA:"Cape Verde"},
+  {id:6,kamp:"BEL–EGY",dato:"15/6",norge:false,apiH:"Belgium",apiA:"Egypt"},
+  {id:7,kamp:"FRA–SEN",dato:"16/6",norge:false,apiH:"France",apiA:"Senegal"},
+  {id:8,kamp:"IRQ–NOR",dato:"17/6",norge:true,apiH:"Iraq",apiA:"Norway"},
+  {id:9,kamp:"ENG–CRO",dato:"17/6",norge:false,apiH:"England",apiA:"Croatia"},
+  {id:10,kamp:"CZE–RSA",dato:"18/6",norge:false,apiH:"Czech",apiA:"South Africa"},
+  {id:11,kamp:"USA–AUS",dato:"19/6",norge:false,apiH:"USA",apiA:"Australia"},
+  {id:12,kamp:"SCO–MAR",dato:"20/6",norge:false,apiH:"Scotland",apiA:"Morocco"},
+  {id:13,kamp:"NED–SWE",dato:"20/6",norge:false,apiH:"Netherlands",apiA:"Sweden"},
+  {id:14,kamp:"ESP–KSA",dato:"21/6",norge:false,apiH:"Spain",apiA:"Saudi Arabia"},
+  {id:15,kamp:"BEL–IRN",dato:"21/6",norge:false,apiH:"Belgium",apiA:"Iran"},
+  {id:16,kamp:"ARG–AUT",dato:"22/6",norge:false,apiH:"Argentina",apiA:"Austria"},
+  {id:17,kamp:"NOR–SEN",dato:"23/6",norge:true,apiH:"Norway",apiA:"Senegal"},
+  {id:18,kamp:"ENG–GHA",dato:"23/6",norge:false,apiH:"England",apiA:"Ghana"},
+  {id:19,kamp:"SUI–CAN",dato:"24/6",norge:false,apiH:"Switzerland",apiA:"Canada"},
+  {id:20,kamp:"ECU–GER",dato:"25/6",norge:false,apiH:"Ecuador",apiA:"Germany"},
+  {id:21,kamp:"NOR–FRA",dato:"26/6",norge:true,apiH:"Norway",apiA:"France"},
+  {id:22,kamp:"COL–POR",dato:"28/6",norge:false,apiH:"Colombia",apiA:"Portugal"},
+];
+
+const DT=[
+  {n:"Mikael Amit Kumar",t:[["H","2-1"],["U","1-1"],["H","3-0"],["H","3-1"],["H","3-1"],["H","2-1"],["H","2-1"],["B","0-3"],["H","2-1"],["U","1-1"],["H","2-1"],["H","2-0"],["H","2-1"],["H","3-0"],["H","2-1"],["H","2-0"],["H","2-1"],["H","2-1"],["U","1-1"],["B","0-2"],["U","1-1"],["B","1-2"]]},
+  {n:"Lars Karlsen",t:[["H","1-0"],["H","1-0"],["U","1-1"],["H","1-0"],["H","2-0"],["U","1-1"],["U","0-0"],["B","0-1"],["H","1-0"],["U","0-0"],["H","2-0"],["B","0-1"],["H","3-0"],["H","2-0"],["B","0-1"],["H","2-1"],["H","1-0"],["H","1-0"],["U","1-1"],["B","0-1"],["U","0-0"],["H","2-1"]]},
+  {n:"Fredrik Jagland Kjeldsen",t:[["H","1-0"],["H","2-1"],["H","1-0"],["H","2-1"],["H","2-0"],["H","2-0"],["H","3-0"],["B","1-3"],["H","1-0"],["B","1-2"],["H","2-0"],["B","1-2"],["H","3-0"],["H","2-0"],["H","4-1"],["H","1-0"],["H","3-1"],["H","2-0"],["H","3-0"],["B","1-3"],["B","1-2"],["B","1-3"]]},
+  {n:"Vidar Persbraaten",t:[["H","3-0"],["U","1-1"],["H","3-2"],["H","3-1"],["H","5-0"],["U","2-2"],["H","4-3"],["B","1-3"],["H","3-2"],["H","4-1"],["U","1-1"],["B","1-2"],["U","2-2"],["H","4-1"],["H","3-0"],["H","2-1"],["U","2-2"],["H","2-1"],["H","3-0"],["B","0-3"],["B","2-3"],["U","3-3"]]},
+  {n:"Vikram Gupta",t:[["H","2-0"],["H","2-1"],["H","3-1"],["H","2-1"],["H","4-0"],["H","2-0"],["H","2-1"],["B","0-2"],["U","0-0"],["U","1-1"],["H","3-1"],["U","1-1"],["H","2-0"],["H","3-0"],["H","3-0"],["H","2-0"],["H","3-1"],["H","2-0"],["U","1-1"],["B","1-3"],["U","1-1"],["U","2-2"]]},
+  {n:"Ulrika Olsson",t:[["H","2-0"],["U","1-1"],["H","2-1"],["H","2-1"],["H","3-0"],["H","2-0"],["H","2-1"],["B","0-2"],["H","2-1"],["H","2-0"],["H","2-1"],["B","1-2"],["H","2-1"],["H","3-0"],["H","2-1"],["H","2-0"],["U","2-2"],["H","3-1"],["H","2-1"],["B","1-2"],["B","1-2"],["U","1-1"]]},
+  {n:"André Jægtvik",t:[["U","1-1"],["H","2-1"],["U","1-1"],["H","2-1"],["H","3-1"],["H","2-1"],["H","2-0"],["B","1-3"],["B","1-2"],["H","3-0"],["H","2-1"],["B","0-1"],["H","3-0"],["H","3-0"],["H","3-0"],["H","2-1"],["H","2-1"],["H","2-1"],["H","2-1"],["B","1-2"],["B","1-2"],["B","1-2"]]},
+  {n:"Ole Ivar Solfall",t:[["U","0-0"],["H","1-0"],["H","2-1"],["H","2-0"],["H","4-0"],["B","1-3"],["H","2-1"],["B","1-2"],["U","2-2"],["B","0-1"],["H","3-1"],["U","1-1"],["H","2-1"],["H","3-1"],["H","3-1"],["H","5-1"],["U","1-1"],["H","3-1"],["B","1-2"],["B","1-4"],["U","2-2"],["B","1-3"]]},
+  {n:"Lovedeep Sharma",t:[["U","0-0"],["B","0-1"],["H","2-0"],["H","3-0"],["H","4-0"],["B","1-2"],["H","2-1"],["B","1-2"],["H","3-1"],["B","1-2"],["H","2-0"],["H","3-1"],["H","2-0"],["H","4-1"],["B","0-1"],["H","3-1"],["B","1-2"],["H","2-1"],["H","3-0"],["B","0-5"],["B","1-3"],["B","1-3"]]},
+  {n:"Gomi Jain",t:[["H","2-0"],["U","1-1"],["H","3-1"],["U","2-2"],["H","4-0"],["H","2-0"],["H","2-1"],["B","0-2"],["H","2-1"],["H","2-0"],["H","2-1"],["U","1-1"],["H","2-0"],["H","3-0"],["H","2-1"],["H","3-0"],["U","1-1"],["H","2-0"],["H","2-1"],["B","1-3"],["B","0-2"],["B","1-2"]]},
+  {n:"Sach Gupta",t:[["H","2-1"],["U","1-1"],["H","3-0"],["H","3-1"],["H","3-1"],["H","2-1"],["H","2-1"],["B","0-3"],["H","2-1"],["U","1-1"],["H","2-1"],["H","2-0"],["H","2-1"],["H","3-0"],["H","2-1"],["H","2-0"],["H","2-1"],["H","2-1"],["U","1-1"],["B","0-2"],["U","1-1"],["B","1-2"]]},
+  {n:"Vetle Huglen",t:[["H","2-0"],["H","2-1"],["H","2-1"],["H","2-1"],["H","3-0"],["H","2-1"],["H","2-1"],["B","1-2"],["U","1-1"],["H","1-0"],["H","2-1"],["B","0-1"],["H","2-1"],["H","3-0"],["H","2-0"],["H","2-0"],["U","1-1"],["H","2-0"],["U","1-1"],["B","1-2"],["B","1-2"],["B","1-2"]]},
+  {n:"Gurkamaljit Singh Virk",t:[["H","2-0"],["H","2-1"],["U","1-1"],["H","2-1"],["H","4-0"],["U","0-0"],["U","1-1"],["B","1-3"],["U","1-1"],["B","1-2"],["H","2-0"],["B","1-3"],["H","3-0"],["H","2-0"],["H","2-1"],["H","4-0"],["H","2-1"],["H","2-1"],["U","1-1"],["B","1-2"],["U","1-1"],["B","1-2"]]},
+  {n:"Kim Pedersen Lieblein",t:[["H","2-1"],["H","2-1"],["H","2-1"],["H","2-1"],["H","3-0"],["H","2-0"],["U","0-0"],["B","1-2"],["H","2-1"],["H","2-1"],["H","2-1"],["B","0-2"],["H","4-1"],["H","3-0"],["H","2-0"],["U","2-2"],["B","1-2"],["U","1-1"],["H","2-0"],["B","1-3"],["B","0-1"],["B","1-2"]]},
+  {n:"Ole R. Hansen",t:[["H","2-0"],["U","1-1"],["H","3-1"],["H","2-1"],["H","3-0"],["H","2-0"],["H","2-1"],["B","1-2"],["H","2-1"],["H","2-0"],["H","2-1"],["U","1-1"],["U","1-1"],["H","2-0"],["H","2-1"],["H","2-0"],["U","1-1"],["H","2-0"],["H","2-1"],["B","1-2"],["B","0-2"],["B","1-2"]]},
+  {n:"Håvard Ellingsen",t:[["H","2-1"],["U","1-1"],["H","2-1"],["U","2-2"],["H","2-0"],["H","2-1"],["U","2-2"],["B","0-3"],["H","1-0"],["B","1-2"],["H","3-0"],["B","1-2"],["H","4-0"],["H","2-0"],["H","3-0"],["H","3-1"],["H","3-1"],["H","2-1"],["H","2-1"],["B","2-3"],["H","2-1"],["U","2-2"]]},
+  {n:"Anita Cummings",t:[["H","2-0"],["B","0-1"],["H","3-0"],["H","2-1"],["H","3-0"],["U","1-1"],["H","4-2"],["B","1-2"],["H","3-2"],["U","1-1"],["H","2-0"],["H","1-0"],["H","3-2"],["H","4-0"],["H","3-2"],["H","2-1"],["H","1-0"],["U","1-1"],["H","3-1"],["B","1-2"],["B","1-2"],["U","2-2"]]},
+  {n:"Monica Pedersen Lieblein",t:[["H","2-1"],["H","3-1"],["H","2-0"],["H","2-0"],["H","3-0"],["H","2-0"],["U","0-0"],["B","1-2"],["H","2-1"],["U","2-2"],["H","2-0"],["U","0-0"],["H","4-1"],["H","3-1"],["H","2-0"],["H","3-1"],["U","2-2"],["H","2-0"],["B","1-2"],["B","1-3"],["B","1-2"],["U","0-0"]]},
+  {n:"Inderjit Singh Marjara",t:[["H","2-1"],["H","1-0"],["B","0-1"],["H","3-1"],["H","4-0"],["H","2-1"],["H","3-2"],["B","1-3"],["U","2-2"],["H","1-0"],["H","2-1"],["B","1-2"],["H","2-1"],["H","4-0"],["H","2-1"],["H","3-1"],["B","1-2"],["H","2-1"],["U","1-1"],["B","1-3"],["B","1-4"],["B","2-3"]]},
+  {n:"Lars Blömacher",t:[["H","2-0"],["H","2-1"],["H","3-1"],["U","1-1"],["H","3-0"],["H","3-1"],["H","3-2"],["B","0-3"],["H","2-0"],["U","0-0"],["H","1-0"],["U","1-1"],["H","3-2"],["H","4-0"],["H","1-0"],["H","3-1"],["H","2-1"],["H","3-1"],["H","3-2"],["B","1-3"],["B","1-2"],["B","1-3"]]},
+  {n:"Claudio Castello",t:[["H","2-1"],["U","1-1"],["H","1-0"],["U","1-1"],["H","3-0"],["H","3-1"],["H","2-1"],["B","0-3"],["U","0-0"],["H","2-0"],["H","1-0"],["U","0-0"],["H","3-1"],["H","4-1"],["H","1-0"],["H","1-0"],["U","2-2"],["H","2-0"],["H","1-0"],["U","1-1"],["B","1-2"],["U","1-1"]]},
+];
+
+const H2H_DATA={
+  "MEX-RSA":{kampIdx:0,hF:"🇲🇽",aF:"🇿🇦",home:"Mexico",away:"Sør-Afrika",hR:14,aR:60,dato:"11/6",tid:"21:00",kanal:"TV2",stad:"Estadio Azteca, Mexico City",h2h:{tot:3,hW:2,dr:1,aW:0,m:[{y:2010,h:"Mexico",a:"Sør-Afrika",s:"1-1",c:"VM"},{y:2005,h:"Mexico",a:"Sør-Afrika",s:"1-0",c:"Confed. Cup"},{y:2000,h:"Mexico",a:"Sør-Afrika",s:"2-0",c:"Vennekamp"}]},hForm:["V","V","U","V","V"],aForm:["V","U","T","V","U"],hGF:2.1,hGA:0.9,aGF:1.2,aGA:1.4,kH:["Santiago Giménez ⭐","Hirving Lozano ⚡","Edson Álvarez"],kA:["Percy Tau 🌟","Bongani Zungu","Themba Zwane"],absH:[],absA:[],ana:"Mexico åpner VM på legendariske Azteca foran 80.000 tilskuere! Klar favoritt (FIFA #14 vs #60). Mexico dominerer H2H: 2 seirer, 1 uavgjort, 0 tap mot Sør-Afrika.",sH:65,sU:22,sB:13,ss:"2-0",v:"Mexico vinner komfortabelt hjemme"},
+  "CAN-BIH":{kampIdx:1,hF:"🇨🇦",aF:"🇧🇦",home:"Canada",away:"Bosnia-Herz.",hR:30,aR:64,dato:"12/6",tid:"21:00",kanal:"NRK",stad:"BMO Field, Toronto",h2h:{tot:2,hW:0,dr:1,aW:1,m:[{y:2019,h:"Canada",a:"Bosnia",s:"0-0",c:"Vennekamp"},{y:2017,h:"Bosnia",a:"Canada",s:"2-0",c:"Vennekamp"}]},hForm:["V","V","V","U","T"],aForm:["V","V","T","U","V"],hGF:1.6,hGA:1.1,aGF:1.4,aGA:1.2,kH:["Jonathan David ⚡","Cyle Larin","Tajon Buchanan"],kA:["Edin Džeko (40 år!) 👴","Esmir Bajraktarević ⭐","Kerim Alajbegović"],absH:["Alphonso Davies 🚑 (hamstring)"],absA:[],ana:"Canada er hjemmenasjon og favoritt (FIFA #30 vs #64). Bosnia slo Italia i playoff – ingen enkel motstander! Davies er ute skadet, men Canada har bred tropp.",sH:52,sU:24,sB:24,ss:"1-1",v:"Jevn kamp – uavgjort er sannsynlig"},
+  "BRA-MAR":{kampIdx:2,hF:"🇧🇷",aF:"🇲🇦",home:"Brasil",away:"Marokko",hR:6,aR:14,dato:"14/6",tid:"00:00",kanal:"TV2",stad:"SoFi Stadium, Los Angeles",h2h:{tot:4,hW:3,dr:1,aW:0,m:[{y:2022,h:"Marokko",a:"Brasil",s:"0-0 (pen)",c:"VM Kvartfinale"},{y:2018,h:"Brasil",a:"Marokko",s:"1-0",c:"Vennekamp"},{y:1998,h:"Brasil",a:"Marokko",s:"3-0",c:"VM"},{y:1970,h:"Brasil",a:"Marokko",s:"1-0",c:"VM"}]},hForm:["V","V","V","U","V"],aForm:["V","V","V","U","V"],hGF:2.4,hGA:0.8,aGF:1.6,aGA:0.9,kH:["Vinicius Jr. ⚡","Rodrygo ⭐","Raphinha"],kA:["Achraf Hakimi 🌟","Hakim Ziyech ⭐","Youssef En-Nesyri"],absH:[],absA:[],ana:"Drømmemøte! Brasil (FIFA #6) vs Marokko (FIFA #14) – laget som slo Brasil på straffespark i VM 2022. Marokko vant afrikamesterskapet og er sterkere enn noensinne. Brasil med Vinicius Jr. er likevel favoritt.",sH:55,sU:22,sB:23,ss:"2-1",v:"Brasil vinner, men Marokko er farlige"},
+  "NED-JPN":{kampIdx:3,hF:"🇳🇱",aF:"🇯🇵",home:"Nederland",away:"Japan",hR:8,aR:18,dato:"14/6",tid:"22:00",kanal:"TV2",stad:"Levi's Stadium, San Francisco",h2h:{tot:3,hW:2,dr:0,aW:1,m:[{y:2022,h:"Japan",a:"Nederland",s:"1-0",c:"VM (Japan vant!)"},{y:2013,h:"Nederland",a:"Japan",s:"3-2",c:"Vennekamp"},{y:2000,h:"Nederland",a:"Japan",s:"3-0",c:"Vennekamp"}]},hForm:["V","V","U","V","V"],aForm:["V","V","V","U","V"],hGF:2.0,hGA:1.0,aGF:1.8,aGA:0.7,kH:["Virgil van Dijk 🛡️","Memphis Depay ⚡","Cody Gakpo ⭐"],kA:["Takumi Minamino ⭐","Daichi Kamada ⚡","Ritsu Doan"],absH:[],absA:[],ana:"Japan slo Nederland i VM 2022! De er Asias beste lag og kjent for overraskelser. Nederland er rangert høyere (FIFA #8 vs #18) men undervurder ikke Japan.",sH:55,sU:23,sB:22,ss:"2-1",v:"Nederland vinner, men Japan kjemper"},
+  "ESP-CPV":{kampIdx:4,hF:"🇪🇸",aF:"🇨🇻",home:"Spania",away:"Kapp Verde",hR:2,aR:79,dato:"15/6",tid:"18:00",kanal:"TV2",stad:"AT&T Stadium, Dallas",h2h:{tot:1,hW:1,dr:0,aW:0,m:[{y:2014,h:"Spania",a:"Kapp Verde",s:"4-0",c:"Vennekamp"}]},hForm:["V","V","V","V","V"],aForm:["V","U","V","T","V"],hGF:2.8,hGA:0.6,aGF:1.2,aGA:1.1,kH:["Pedri ⭐","Lamine Yamal ⚡","Álvaro Morata"],kA:["Ryan Mendes 🌟","Garry Rodrigues","Stopira"],absH:[],absA:[],ana:"Spania (FIFA #2) er en av VM-favorittene og møter Kapp Verde (FIFA #79) – en enorm rangforskjell. Spania dominerte H2H: 4-0 i eneste møte. Kapp Verde har imponert i Afrika, men dette er en annen klasse.",sH:85,sU:10,sB:5,ss:"4-0",v:"Storskalert Spania-seier"},
+  "BEL-EGY":{kampIdx:5,hF:"🇧🇪",aF:"🇪🇬",home:"Belgia",away:"Egypt",hR:12,aR:34,dato:"15/6",tid:"21:00",kanal:"NRK",stad:"Rose Bowl, Los Angeles",h2h:{tot:3,hW:2,dr:1,aW:0,m:[{y:2018,h:"Belgia",a:"Egypt",s:"3-0",c:"VM"},{y:2014,h:"Belgia",a:"Egypt",s:"U",c:"Vennekamp"},{y:1990,h:"Belgia",a:"Egypt",s:"3-1",c:"VM"}]},hForm:["V","V","U","V","V"],aForm:["V","V","V","U","V"],hGF:2.2,hGA:0.9,aGF:1.4,aGA:1.0,kH:["Kevin De Bruyne ⭐","Romelu Lukaku ⚡","Thibaut Courtois 🧤"],kA:["Mohamed Salah 🌟","Omar Marmoush ⭐","Trézéguet"],absH:[],absA:[],ana:"Belgia (FIFA #12) med De Bruyne og Lukaku møter Egypts Salah (FIFA #34). Salah er verdens beste spiller og kan avgjøre alene. Belgia har imidlertid sterk H2H: 2 seirer, 1 uavgjort.",sH:58,sU:22,sB:20,ss:"2-1",v:"Jevnt – Belgia vinner knapt"},
+  "FRA-SEN":{kampIdx:6,hF:"🇫🇷",aF:"🇸🇳",home:"Frankrike",away:"Senegal",hR:3,aR:20,dato:"16/6",tid:"21:00",kanal:"TV2",stad:"MetLife Stadium, New York",h2h:{tot:5,hW:3,dr:1,aW:1,m:[{y:2002,h:"Senegal",a:"Frankrike",s:"1-0",c:"VM (sjokk!)"},{y:2010,h:"Frankrike",a:"Senegal",s:"0-0",c:"Vennekamp"},{y:2001,h:"Frankrike",a:"Senegal",s:"5-0",c:"Vennekamp"},{y:1994,h:"Frankrike",a:"Senegal",s:"2-2",c:"Vennekamp"},{y:1979,h:"Frankrike",a:"Senegal",s:"6-1",c:"Vennekamp"}]},hForm:["V","V","V","V","U"],aForm:["V","V","V","U","V"],hGF:2.5,hGA:0.8,aGF:1.7,aGA:0.9,kH:["Kylian Mbappé ⚡","Antoine Griezmann ⭐","Aurélien Tchouaméni"],kA:["Sadio Mané 🌟","Kalidou Koulibaly 🛡️","Ismaïla Sarr"],absH:[],absA:[],ana:"Frankrike (FIFA #3) er storfavoritt, men Senegal slo Frankrike i VM 2002 i en av historiens største VM-overraskelser! Mbappé vs Mané – to av verdens beste. Norges gruppe-rival Senegal gir Frankrike kamp.",sH:62,sU:20,sB:18,ss:"2-1",v:"Frankrike vinner, men Senegal utfordrer"},
+  "IRQ-NOR":{kampIdx:7,hF:"🇮🇶",aF:"🇳🇴",home:"Irak",away:"Norge",hR:58,aR:23,dato:"17/6",tid:"00:00",kanal:"TV2",stad:"Allegiant Stadium, Las Vegas",h2h:{tot:2,hW:0,dr:1,aW:1,m:[{y:2004,h:"Norge",a:"Irak",s:"1-0",c:"Vennekamp"},{y:2003,h:"Irak",a:"Norge",s:"1-1",c:"Vennekamp"}]},hForm:["V","U","V","V","T"],aForm:["V","V","V","V","V"],hGF:1.5,hGA:1.2,aGF:2.1,aGA:0.8,kH:["Ayman Hussein ⭐","Aymen Hussain","Ali Adnan"],kA:["Erling Haaland 🌟⚡","Martin Ødegaard ⭐","Alexander Sørloth"],absH:[],absA:[],ana:"Norges første VM-kamp på 28 år! Norge (FIFA #23) er klar favoritt mot Irak (FIFA #58). Haaland, Ødegaard og Sørloth – et av verdens sterkeste angrep. Irak kvalifiserte seg overraskende og er ikke redde. Men Norge brenner for dette!",sH:70,sU:18,sB:12,ss:"0-2",v:"Norge vinner første VM-kamp på 28 år! 🇳🇴"},
+  "ENG-CRO":{kampIdx:8,hF:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",aF:"🇭🇷",home:"England",away:"Kroatia",hR:4,aR:11,dato:"17/6",tid:"22:00",kanal:"TV2",stad:"AT&T Stadium, Dallas",h2h:{tot:8,hW:4,dr:2,aW:2,m:[{y:2022,h:"England",a:"Kroatia",s:"0-0",c:"VM"},{y:2021,h:"England",a:"Kroatia",s:"1-0",c:"EM"},{y:2018,h:"Kroatia",a:"England",s:"2-1",c:"VM Semifinale"},{y:2008,h:"Kroatia",a:"England",s:"1-4",c:"VM-kval"}]},hForm:["V","V","V","U","V"],aForm:["V","U","V","V","T"],hGF:2.2,hGA:0.8,aGF:1.5,aGA:1.1,kH:["Jude Bellingham ⭐","Harry Kane ⚡","Phil Foden"],kA:["Luka Modrić (40 år!) 👴","Ivan Perišić","Andrej Kramarić"],absH:[],absA:[],ana:"Gammel rivalitet! Kroatia slo England i VM 2018-semifinalen på overtid. England er rangert høyere (FIFA #4 vs #11) og favoritten, men Kroatia med Modrić alltid farlig. Bellingham vs Modrić – legendarisk duell.",sH:60,sU:22,sB:18,ss:"2-1",v:"England vinner, men tett kamp"},
+  "CZE-RSA":{kampIdx:9,hF:"🇨🇿",aF:"🇿🇦",home:"Tsjekkia",away:"Sør-Afrika",hR:37,aR:60,dato:"18/6",tid:"18:00",kanal:"NRK",stad:"Mercedes-Benz Stadium, Atlanta",h2h:{tot:2,hW:1,dr:1,aW:0,m:[{y:2015,h:"Tsjekkia",a:"Sør-Afrika",s:"1-0",c:"Vennekamp"},{y:2010,h:"Tsjekkia",a:"Sør-Afrika",s:"2-2",c:"Vennekamp"}]},hForm:["V","V","U","V","T"],aForm:["V","U","T","V","U"],hGF:1.8,hGA:1.1,aGF:1.1,aGA:1.3,kH:["Patrik Schick ⭐","Tomáš Souček","Vladimír Coufal"],kA:["Percy Tau 🌟","Bongani Zungu","Ronwen Williams 🧤"],absH:[],absA:[],ana:"Tsjekkia (FIFA #37) er favoritt mot Sør-Afrika (FIFA #60). Begge lag er jevnbyrdige og H2H viser tette kamper. Schick er Tsjekkias store stjerne.",sH:52,sU:25,sB:23,ss:"2-1",v:"Tsjekkia vinner knapt"},
+  "USA-AUS":{kampIdx:10,hF:"🇺🇸",aF:"🇦🇺",home:"USA",away:"Australia",hR:17,aR:22,dato:"19/6",tid:"21:00",kanal:"NRK",stad:"SoFi Stadium, Los Angeles",h2h:{tot:5,hW:3,dr:0,aW:2,m:[{y:2023,h:"Australia",a:"USA",s:"2-0",c:"Vennekamp"},{y:2016,h:"USA",a:"Australia",s:"3-1",c:"Vennekamp"},{y:2011,h:"USA",a:"Australia",s:"1-1",c:"Gold Cup"}]},hForm:["V","V","V","U","V"],aForm:["V","V","U","V","V"],hGF:2.0,hGA:1.0,aGF:1.9,aGA:1.1,kH:["Christian Pulisic ⚡","Weston McKennie ⭐","Tyler Adams"],kA:["Mat Ryan 🧤","Mitchell Duke ⭐","Jackson Irvine"],absH:[],absA:[],ana:"USA (FIFA #17) spiller hjemme mot Australia (FIFA #22) – begge jevnbyrdige lag! USA vil utnytte hjemmefordelen. Australia er alltid solide og organiserte. Pulisic er USAs store stjerne.",sH:52,sU:25,sB:23,ss:"2-1",v:"USA vinner hjemme"},
+  "SCO-MAR":{kampIdx:11,hF:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",aF:"🇲🇦",home:"Skottland",away:"Marokko",hR:39,aR:14,dato:"20/6",tid:"00:00",kanal:"NRK",stad:"NRG Stadium, Houston",h2h:{tot:1,hW:1,dr:0,aW:0,m:[{y:1998,h:"Skottland",a:"Marokko",s:"1-0",c:"VM"}]},hForm:["V","U","V","T","V"],aForm:["V","V","V","U","V"],hGF:1.6,hGA:1.2,aGF:1.7,aGA:0.9,kH:["Andy Robertson 🛡️","Scott McTominay ⭐","Che Adams"],kA:["Achraf Hakimi 🌟","Hakim Ziyech ⭐","En-Nesyri"],absH:[],absA:[],ana:"Stor rangforskjell – Marokko (FIFA #14) er klar favoritt mot Skottland (FIFA #39). Marokko er Afrikas beste lag og fullstendig i VM-form. Skottland er det overraskende med McTominay.",sH:25,sU:22,sB:53,ss:"1-2",v:"Marokko vinner"},
+  "NED-SWE":{kampIdx:12,hF:"🇳🇱",aF:"🇸🇪",home:"Nederland",away:"Sverige",hR:8,aR:25,dato:"20/6",tid:"19:00",kanal:"NRK",stad:"Levi's Stadium, San Francisco",h2h:{tot:12,hW:6,dr:2,aW:4,m:[{y:2023,h:"Sverige",a:"Nederland",s:"2-1",c:"Vennekamp"},{y:2021,h:"Nederland",a:"Sverige",s:"2-0",c:"VM-kval"},{y:2018,h:"Sverige",a:"Nederland",s:"1-0",c:"VM-kval"}]},hForm:["V","V","U","V","V"],aForm:["V","U","V","V","T"],hGF:2.0,hGA:1.0,aGF:1.6,aGA:1.1,kH:["Virgil van Dijk 🛡️","Cody Gakpo ⭐","Memphis Depay"],kA:["Viktor Gyökeres ⚡⭐","Dejan Kulusevski","Alexander Isak"],absH:[],absA:[],ana:"Skandinavisk interesse – Gyökeres er i fantastisk form for Sverige! Nederland (FIFA #8) er favoritt, men Sverige (FIFA #25) med Gyökeres, Isak og Kulusevski er farlige. H2H er jevnt.",sH:55,sU:22,sB:23,ss:"2-1",v:"Nederland vinner, men Sverige kjemper"},
+  "ESP-KSA":{kampIdx:13,hF:"🇪🇸",aF:"🇸🇦",home:"Spania",away:"Saudi-Arabia",hR:2,aR:56,dato:"21/6",tid:"18:00",kanal:"NRK",stad:"MetLife Stadium, New York",h2h:{tot:3,hW:3,dr:0,aW:0,m:[{y:2022,h:"Saudi-Arabia",a:"Spania",s:"0-1",c:"VM"},{y:2018,h:"Spania",a:"Saudi-Arabia",s:"1-0",c:"VM"},{y:2001,h:"Spania",a:"Saudi-Arabia",s:"4-0",c:"Vennekamp"}]},hForm:["V","V","V","V","V"],aForm:["V","U","V","T","U"],hGF:2.8,hGA:0.6,aGF:1.3,aGA:1.3,kH:["Pedri ⭐","Lamine Yamal ⚡","Álvaro Morata"],kA:["Salem Al-Dawsari 🌟","Mohammed Al-Shehri","Yasser Al-Shahrani"],absH:[],absA:[],ana:"Spania (FIFA #2) er klar favoritt mot Saudi-Arabia (FIFA #56). Saudi slo Argentina i VM 2022 – men Spania er et annet kaliber. Spania dominerer totalt på papiret.",sH:80,sU:13,sB:7,ss:"3-0",v:"Storskalert Spania-seier"},
+  "BEL-IRN":{kampIdx:14,hF:"🇧🇪",aF:"🇮🇷",home:"Belgia",away:"Iran",hR:12,aR:22,dato:"21/6",tid:"21:00",kanal:"TV2",stad:"Rose Bowl, Los Angeles",h2h:{tot:2,hW:2,dr:0,aW:0,m:[{y:2014,h:"Belgia",a:"Iran",s:"1-0",c:"VM"},{y:1980,h:"Belgia",a:"Iran",s:"1-1",c:"VM"}]},hForm:["V","V","U","V","V"],aForm:["V","V","U","V","T"],hGF:2.2,hGA:0.9,aGF:1.2,aGA:1.0,kH:["Kevin De Bruyne ⭐","Romelu Lukaku ⚡","Thibaut Courtois 🧤"],kA:["Mehdi Taremi 🌟","Sardar Azmoun ⭐","Alireza Jahanbakhsh"],absH:[],absA:[],ana:"Belgia (FIFA #12) er favoritt mot Iran (FIFA #22). Begge lag er jevnbyrdige på papiret. Taremi er Irans store stjerne. De Bruyne og Lukaku er Belgias motor.",sH:58,sU:22,sB:20,ss:"2-1",v:"Belgia vinner"},
+  "ARG-AUT":{kampIdx:15,hF:"🇦🇷",aF:"🇦🇹",home:"Argentina",away:"Østerrike",hR:1,aR:27,dato:"22/6",tid:"19:00",kanal:"TV2",stad:"Hard Rock Stadium, Miami",h2h:{tot:5,hW:3,dr:1,aW:1,m:[{y:2022,h:"Argentina",a:"Østerrike",s:"2-0",c:"Vennekamp"},{y:2016,h:"Argentina",a:"Østerrike",s:"1-0",c:"Vennekamp"},{y:1980,h:"Argentina",a:"Østerrike",s:"2-1",c:"VM"}]},hForm:["V","V","V","V","V"],aForm:["V","V","V","U","V"],hGF:2.6,hGA:0.7,aGF:1.7,aGA:0.9,kH:["Lionel Messi 🐐⭐","Lautaro Martínez ⚡","Enzo Fernández"],kA:["Marcel Sabitzer ⭐","Christoph Baumgartner","Patrick Wimmer"],absH:[],absA:[],ana:"VM-mester Argentina (FIFA #1) med Messi i sannsynligvis sitt siste VM. Østerrike (FIFA #27) er et godt lag, men møter verdens beste. Messi vil gjøre alt for å forsvare tittelen.",sH:72,sU:18,sB:10,ss:"2-0",v:"Argentina vinner – Messi viser vei 🐐"},
+  "NOR-SEN":{kampIdx:16,hF:"🇳🇴",aF:"🇸🇳",home:"Norge",away:"Senegal",hR:23,aR:20,dato:"23/6",tid:"02:00",kanal:"NRK",stad:"Levi's Stadium, San Francisco",h2h:{tot:1,hW:1,dr:0,aW:0,m:[{y:2020,h:"Norge",a:"Senegal",s:"1-0",c:"Vennekamp"}]},hForm:["V","V","V","V","V"],aForm:["V","V","V","U","V"],hGF:2.1,hGA:0.8,aGF:1.7,aGA:0.9,kH:["Erling Haaland 🌟⚡","Martin Ødegaard ⭐","Alexander Sørloth"],kA:["Sadio Mané 🌟","Kalidou Koulibaly 🛡️","Ismaïla Sarr"],absH:[],absA:[],ana:"Norges viktigste kamp! (FIFA #23 vs #20) Senegal er marginalt høyere rangert – dette er ekstremt jevnt. Mané vs Haaland – to av verdens beste. Norge må vinne for å sikre avansement. Historisk kamp natt til 23. juni!",sH:45,sU:25,sB:30,ss:"2-1",v:"Norge vinner i en thriller! 🇳🇴🔥"},
+  "ENG-GHA":{kampIdx:17,hF:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",aF:"🇬🇭",home:"England",away:"Ghana",hR:4,aR:65,dato:"23/6",tid:"22:00",kanal:"NRK",stad:"AT&T Stadium, Dallas",h2h:{tot:4,hW:3,dr:1,aW:0,m:[{y:2011,h:"England",a:"Ghana",s:"1-1",c:"Vennekamp"},{y:2010,h:"England",a:"Ghana",s:"1-0",c:"VM"},{y:2007,h:"England",a:"Ghana",s:"1-0",c:"Vennekamp"}]},hForm:["V","V","V","U","V"],aForm:["V","V","U","T","V"],hGF:2.2,hGA:0.8,aGF:1.3,aGA:1.2,kH:["Jude Bellingham ⭐","Harry Kane ⚡","Phil Foden"],kA:["Mohammed Kudus 🌟","André Ayew","Jordan Ayew"],absH:[],absA:[],ana:"England (FIFA #4) er klar favoritt mot Ghana (FIFA #65). Stor rankingforskjell. Ghana har Kudus fra West Ham, men England er et annet nivå.",sH:75,sU:15,sB:10,ss:"2-0",v:"England vinner komfortabelt"},
+  "SUI-CAN":{kampIdx:18,hF:"🇨🇭",aF:"🇨🇦",home:"Sveits",away:"Canada",hR:19,aR:30,dato:"24/6",tid:"21:00",kanal:"NRK",stad:"Gillette Stadium, Boston",h2h:{tot:3,hW:2,dr:1,aW:0,m:[{y:2021,h:"Sveits",a:"Canada",s:"2-1",c:"Vennekamp"},{y:2018,h:"Sveits",a:"Canada",s:"5-1",c:"Vennekamp"},{y:2006,h:"Sveits",a:"Canada",s:"1-1",c:"Vennekamp"}]},hForm:["V","V","V","U","V"],aForm:["V","V","U","T","V"],hGF:1.9,hGA:0.8,aGF:1.6,aGA:1.1,kH:["Granit Xhaka ⭐","Xherdan Shaqiri","Breel Embolo ⚡"],kA:["Jonathan David ⚡","Cyle Larin","Tajon Buchanan"],absH:[],absA:["Alphonso Davies 🚑"],ana:"Sveits (FIFA #19) er favoritt mot Canada (FIFA #30). H2H er klart til Sveits' fordel. Begge lag trenger poeng for avansement. Davies er ute for Canada.",sH:55,sU:25,sB:20,ss:"2-1",v:"Sveits vinner"},
+  "ECU-GER":{kampIdx:19,hF:"🇪🇨",aF:"🇩🇪",home:"Ecuador",away:"Tyskland",hR:44,aR:15,dato:"25/6",tid:"22:00",kanal:"TV2",stad:"NRG Stadium, Houston",h2h:{tot:3,hW:0,dr:1,aW:2,m:[{y:2014,h:"Ecuador",a:"Tyskland",s:"0-2",c:"VM"},{y:2013,h:"Ecuador",a:"Tyskland",s:"0-4",c:"Vennekamp"},{y:2006,h:"Ecuador",a:"Tyskland",s:"0-3",c:"VM"}]},hForm:["V","U","V","T","V"],aForm:["V","V","V","V","U"],hGF:1.4,hGA:1.2,aGF:2.3,hGA:0.9,kH:["Enner Valencia ⭐","Moisés Caicedo 🌟","Gonzalo Plata"],kA:["Florian Wirtz ⚡⭐","Kai Havertz","Jamal Musiala"],absH:[],absA:[],ana:"Tyskland (FIFA #15) er klar favoritt mot Ecuador (FIFA #44). H2H: 3 tyske seirer, 0 Ecuador. Wirtz, Musiala og Havertz er Tysklands enorme offensiv. Ecuador med Caicedo har potensial til å overraske.",sH:25,sU:20,sB:55,ss:"1-3",v:"Tyskland vinner"},
+  "NOR-FRA":{kampIdx:20,hF:"🇳🇴",aF:"🇫🇷",home:"Norge",away:"Frankrike",hR:23,aR:3,dato:"26/6",tid:"21:00",kanal:"NRK",stad:"Rose Bowl, Los Angeles",h2h:{tot:6,hW:1,dr:2,aW:3,m:[{y:2023,h:"Norge",a:"Frankrike",s:"0-2",c:"Vennekamp"},{y:1999,h:"Norge",a:"Frankrike",s:"0-0",c:"VM"},{y:1998,h:"Frankrike",a:"Norge",s:"2-1",c:"VM"},{y:1994,h:"Frankrike",a:"Norge",s:"0-1",c:"VM-kval"},{y:1992,h:"Norge",a:"Frankrike",s:"2-0",c:"Vennekamp"}]},hForm:["V","V","V","V","V"],aForm:["V","V","V","V","U"],hGF:2.1,hGA:0.8,aGF:2.5,aGA:0.8,kH:["Erling Haaland 🌟⚡","Martin Ødegaard ⭐","Alexander Sørloth"],kA:["Kylian Mbappé ⚡","Antoine Griezmann ⭐","Aurélien Tchouaméni"],absH:[],absA:[],ana:"Norges mest dramatiske kamp! Frankrike (FIFA #3) er storfavoritt, men Norge (FIFA #23) slo faktisk Frankrike i VM-kvalifisering i 1994! Haaland vs Mbappé – verdens to beste? Avgjørende for gruppe-avansement. Alt er mulig!",sH:25,sU:22,sB:53,ss:"1-2",v:"Frankrike vinner, men Norge sloss til slutt! 🇳🇴❤️"},
+  "COL-POR":{kampIdx:21,hF:"🇨🇴",aF:"🇵🇹",home:"Colombia",away:"Portugal",hR:21,aR:5,dato:"28/6",tid:"01:30",kanal:"NRK",stad:"Estadio Azteca, Mexico City",h2h:{tot:4,hW:1,dr:1,aW:2,m:[{y:2021,h:"Portugal",a:"Colombia",s:"0-0",c:"Vennekamp"},{y:2017,h:"Colombia",a:"Portugal",s:"1-0",c:"Vennekamp"},{y:2014,h:"Portugal",a:"Colombia",s:"0-2",c:"VM"},{y:1996,h:"Portugal",a:"Colombia",s:"3-0",c:"Vennekamp"}]},hForm:["V","V","V","U","V"],aForm:["V","V","V","V","V"],hGF:1.8,hGA:1.1,aGF:2.3,aGA:0.8,kH:["James Rodríguez ⭐","Luis Díaz ⚡","Falcao"],kA:["Cristiano Ronaldo 🐐⭐","Bruno Fernandes","Rafael Leão ⚡"],absH:[],absA:[],ana:"Portugal (FIFA #5) med Ronaldo er klar favoritt mot Colombia (FIFA #21). Ronaldos siste VM? James Rodríguez og Luis Díaz kan overraske for Colombia, men Portugal er et niveau over.",sH:30,sU:22,sB:48,ss:"1-2",v:"Portugal vinner – Ronaldo avgjør"}
+
+};
+
+// STATE
+let fasit=Array(22).fill(null);
+let locked=new Set();
+let liveState=null;
+let editIdx=null;
+let expandedKamp=null;
+let currentView='tabell';
+
+// HELPERS
+const tegn=s=>{const[h,b]=s.split('-').map(Number);return h>b?'H':h<b?'B':'U'};
+const parseVal=v=>{const t=v.trim().toUpperCase();if(!t)return null;const p=t.split(/\s+/);const s=p.find(x=>/^\d+-\d+$/.test(x))||null;const tg=s?tegn(s):(['H','U','B'].includes(p[0])?p[0]:null);return tg?[tg,s]:null};
+const poeng=(tip,f)=>{if(!f)return null;if(f[1]&&tip[1]===f[1])return 2;if(tip[0]===f[0])return 1;return 0};
+const spillte=()=>fasit.filter(Boolean).length;
+const scoreboard=()=>DT.map(d=>{let p=0,det=[];d.t.forEach((t,i)=>{const f=fasit[i];if(f){const pp=poeng(t,f);p+=pp;det.push(pp)}else det.push(null)});return{...d,p,det}}).sort((a,b)=>b.p-a.p||a.n.localeCompare(b.n,'no'));
+
+// API - Hent fra openfootball/worldcup.json (GitHub, CORS-fri)
+// ── RESULTATER – oppdateres etter hver kamp ──────────────────────────
+const RESULTATER = [
+  [0, "2-0"],  // MEX–RSA ✅
+  [1, "1-1"],  // CAN–BIH ✅
+  [2, "1-1"],  // BRA–MAR: Brasil 1-1 Marokko ✅
+  [3, "2-2"],  // NED–JPN: Nederland 2-2 Japan ✅
+  [4, "0-0"],  // ESP–CPV: Spania 0-0 Kapp Verde ✅
+  [5, "1-1"],  // BEL–EGY: Belgia 1-1 Egypt ✅
+  [6, "3-1"],  // FRA–SEN: Frankrike 3-1 Senegal ✅
+  [7, "1-4"],  // IRQ–NOR: Irak 1-4 Norge ✅ 🇳🇴
+  [8, "4-2"],  // ENG–CRO: England 4-2 Kroatia ✅
+  [9, "1-1"],  // CZE–RSA: Tsjekkia 1-1 Sør-Afrika ✅
+];
+// ─────────────────────────────────────────────────────────────────────
+
+function hentResultater(){
+  RESULTATER.forEach(([i,s])=>{ fasit[i]=[tegn(s),s]; locked.add(i); });
+  document.getElementById('apiStatus').textContent=`✓ ${RESULTATER.length} resultater`;
+  document.getElementById('apiStatus').style.color='#90ee90';
+  oppdaterAlt();
+}
+
+// VIEWS
+function setView(v){
+  currentView=v;
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.tab').forEach(e=>{if(e.getAttribute('onclick').includes("'"+v+"'"))e.classList.add('active')});
+  oppdaterAlt();
+}
+
+function oppdaterAlt(){
+  document.getElementById('spillteSpan').textContent=spillte();
+  renderLiveBanner();
+  if(currentView==='tabell')renderTabell();
+  if(currentView==='kamper')renderKamper();
+  if(currentView==='odds')renderOdds();
+  if(currentView==='analyse')renderAnalyse();
+  if(currentView==='fun')renderFun();
+  if(currentView==='race')renderRace();
+}
+
+// TABELL
+function renderTabell(){
+  const sb=scoreboard();const sp=spillte();const med=['🥇','🥈','🥉'];
+  document.getElementById('tabellContent').innerHTML=sb.map((d,i)=>{
+    const top3=i<3;const pct=sp>0?(d.p/(sp*2))*100:0;
+    const dots=sp>0?`<div style="display:flex;gap:2px;padding:0 14px 10px;flex-wrap:wrap">${d.det.map((p,j)=>p!==null?`<div title="${KAMPER[j].kamp}" style="width:20px;height:20px;border-radius:3px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;background:${p===2?'#1a6b2f':p===1?'#7a5c00':'#5c1a1a'};color:${p===2?'#90ee90':p===1?'#FFD700':'#ff9999'};border:${KAMPER[j].norge?'1px solid #FFD700':'none'}">${p}</div>`:'').join('')}</div>`:'';
+    return`<div class="card ${top3?'card-top3':'card-normal'}" onclick="openPlayer('${d.n.replace(/'/g,"\\'")}') " style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 14px">
+        <div style="font-size:${top3?20:14}px;width:28px;text-align:center">${i<3?med[i]:(i+1)+'.'}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;color:${top3?'#FFD700':'#fff'}">${d.n}</div>
+          <div class="progress" style="margin-top:5px"><div class="progress-fill" style="width:${pct}%;background:${top3?'#FFD700':'#cc1122'}"></div></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:900;color:${top3?'#FFD700':'#fff'}">${d.p}</div>
+          <div style="font-size:10px;color:#6b8f7a">av ${sp*2}</div>
+        </div>
+      </div>${dots}
+    </div>`;
+  }).join('');
+}
+
+// KAMPER
+function renderKamper(){
+  const html=KAMPER.map((k,i)=>{
+    const f=fasit[i];const isLive=liveState?.kampIdx===i;const isLocked=locked.has(i);
+    const teller={H:0,U:0,B:0};DT.forEach(d=>teller[d.t[i][0]]++);
+    const tipsHtml=['H','U','B'].map(t=>`<span style="color:${t==='H'?'#90ee90':t==='U'?'#FFD700':'#ff9999'}">${t}:${teller[t]}</span>`).join(' ');
+    const scoreBg=isLocked?'rgba(255,215,0,.15)':f?'rgba(255,255,255,.1)':'rgba(255,255,255,.04)';
+    const scoreCol=isLocked?'#FFD700':f?'#fff':'#333';
+    const cardCls=isLocked?'card-gold':isLive?'card-live':k.norge?'card-red':'card-normal';
+    const actions=!isLocked?`<div style="display:flex;border-top:1px solid rgba(255,255,255,.06)">
+      <button onclick="handleLiveBtn(${i})" style="flex:1;padding:9px 0;border:none;border-right:1px solid rgba(255,255,255,.06);background:${isLive?'rgba(204,0,0,.3)':'rgba(255,255,255,.03)'};color:${isLive?'#ff6666':'#888'};cursor:pointer;font-size:12px;font-weight:700">${isLive?'🔴 Live pågår – trykk for å oppdatere':'🔴 Start live-score'}</button>
+      <button onclick="openEdit(${i})" style="flex:1;padding:9px 0;border:none;border-right:${f?'1px solid rgba(255,255,255,.06)':'none'};background:rgba(255,255,255,.03);color:#888;cursor:pointer;font-size:12px;font-weight:700">✏️ Sett resultat</button>
+      ${f?`<button onclick="toggleLock(${i})" style="padding:9px 14px;border:none;background:rgba(255,215,0,.08);color:#FFD700;cursor:pointer;font-size:12px;font-weight:700">🔒 Lås</button>`:''}
+    </div>`:
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-top:1px solid rgba(255,215,0,.1);background:rgba(255,215,0,.05);font-size:11px;color:#FFD700">
+      <span>🔒 Sluttresultat låst</span>
+      <button onclick="toggleLock(${i})" style="padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#888;cursor:pointer;font-size:11px">Lås opp</button>
+    </div>`;
+    return`<div class="card ${cardCls}">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+        <div style="width:20px;color:#555;font-size:11px">${i+1}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;color:${k.norge?'#FFD700':'#fff'}">${isLocked?'🔒 ':isLive?'<span style="color:#ff4444">🔴</span> ':''}${k.norge?'⭐ ':''}${k.kamp} <span style="font-weight:400;color:#555;font-size:11px">${k.dato}</span></div>
+          <div style="display:flex;gap:8px;margin-top:3px;font-size:11px">${tipsHtml}</div>
+        </div>
+        <div style="min-width:56px;text-align:center;padding:6px 10px;border-radius:6px;font-weight:800;font-size:16px;background:${scoreBg};color:${scoreCol};border:1px solid ${isLocked?'rgba(255,215,0,.4)':'rgba(255,255,255,.1)'}">${f?f[1]||f[0]:'—'}</div>
+      </div>${actions}
+    </div>`;
+  }).join('');
+  document.getElementById('kamperContent').innerHTML=html;
+}
+
+// FOLKEORAKLET
+function renderOdds(){
+  const sb=scoreboard();
+  document.getElementById('oddsContent').innerHTML=KAMPER.map((k,i)=>{
+    const teller={H:0,U:0,B:0};const scoreTeller={};
+    DT.forEach(d=>{const[tg,sc]=d.t[i];teller[tg]++;if(sc)scoreTeller[sc]=(scoreTeller[sc]||0)+1});
+    const f=fasit[i];const fT=f?.[0];const fS=f?.[1];const isExp=expandedKamp===i;
+    const tegnsHtml=[['H','#cc1122','#ff6677'],['U','#7a6000','#FFD700'],['B','#1a3a7a','#6699ff']].map(([t,bg,col])=>
+      teller[t]?`<div style="flex:${teller[t]};background:${fT===t?bg:bg+'88'};border-radius:5px;display:flex;align-items:center;justify-content:center;gap:4px;min-width:32px;border:${fT===t?`1px solid ${col}`:'1px solid transparent'}"><span style="font-size:11px;font-weight:800;color:${col}">${t}</span><span style="font-size:12px;font-weight:700;color:#fff">${teller[t]}</span>${fT===t?'✓':''}</div>`:''
+    ).join('');
+    const pillsHtml=Object.entries(scoreTeller).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([s,c],si)=>{
+      const eF=fS===s;
+      return`<div style="padding:3px 9px;border-radius:20px;background:${eF?'#FFD700':si===0?'rgba(255,255,255,.12)':'rgba(255,255,255,.05)'};border:${eF?'none':si===0?'1px solid rgba(255,255,255,.2)':'1px solid rgba(255,255,255,.07)'};display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;font-weight:700;color:${eF?'#000':si===0?'#fff':'#777'}">${s}</span>
+        <span style="font-size:11px;font-weight:700;color:${eF?'#333':si===0?'#FFD700':'#555'}">×${c}</span>${eF?'✓':''}
+      </div>`;
+    }).join('');
+    let expHtml='';
+    if(isExp){
+      const g={H:[],U:[],B:[]};
+      DT.forEach(d=>{const[tg,sc]=d.t[i];const rank=sb.findIndex(s=>s.n===d.n)+1;const p=sb.find(s=>s.n===d.n)?.det[i]??null;g[tg].push({n:d.n,sc,p,rank})});
+      expHtml=`<div style="border-top:1px solid rgba(255,255,255,.08);padding:12px 14px;background:rgba(0,0,0,.2)">${
+        [['H','Hjemmeseier','#cc1122','#ff6677'],['U','Uavgjort','#7a6000','#FFD700'],['B','Borteseier','#1a3a7a','#6699ff']].map(([t,lbl,bg,col])=>{
+          const sp=g[t];if(!sp.length)return'';const eRik=fT===t;
+          const pills=sp.sort((a,b)=>(b.p||0)-(a.p||0)||a.n.localeCompare(b.n,'no')).map(sp=>{
+            const eS=fS&&sp.sc===fS;
+            return`<div onclick="openPlayer('${sp.n.replace(/'/g,"\\'")}') " style="padding:4px 10px;border-radius:16px;cursor:pointer;background:${eS?'#FFD700':eRik?'rgba(255,255,255,.1)':'rgba(255,255,255,.05)'};border:${eS?'none':eRik?'1px solid rgba(255,255,255,.2)':'1px solid rgba(255,255,255,.07)'};display:flex;align-items:center;gap:5px">
+              <span style="font-size:11px;color:${eS?'#000':'#aaa'}">#${sp.rank}</span>
+              <span style="font-size:12px;font-weight:700;color:${eS?'#000':'#fff'}">${sp.n.split(' ')[0]}</span>
+              <span style="font-size:11px;color:${eS?'#333':'#666'}">${sp.sc}</span>
+              ${sp.p!==null?`<span style="font-size:11px;font-weight:800;color:${sp.p===2?'#00cc66':sp.p===1?'#FFD700':'#ff6666'}">${sp.p}p</span>`:''}
+            </div>`;
+          }).join('');
+          return`<div style="margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <div style="border-radius:4px;padding:2px 8px;font-size:12px;font-weight:800;background:${eRik?bg:bg+'88'};color:${col}">${t} – ${lbl}</div>
+              <div style="font-size:11px;color:#555">${sp.length} pers.</div>
+              ${eRik?'<div style="font-size:11px;color:#FFD700">✓ Riktig tegn</div>':''}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">${pills}</div>
+          </div>`;
+        }).join('')
+      }</div>`;
+    }
+    const fBadge=f?`<div style="font-size:12px;font-weight:800;color:#FFD700;background:rgba(255,215,0,.1);padding:3px 8px;border-radius:5px">${locked.has(i)?'🔒':'🔴'} ${fS||fT}</div>`:'';
+    return`<div class="card ${k.norge?'card-red':'card-normal'}" style="border:${isExp?'1px solid rgba(255,255,255,.2)':''}">
+      <div style="padding:12px 14px;cursor:pointer" onclick="toggleExp(${i})">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div><span style="font-size:14px;font-weight:700;color:${k.norge?'#FFD700':'#fff'}">${k.norge?'⭐ ':''}${i+1}. ${k.kamp}</span><span style="font-size:11px;color:#555;margin-left:6px">${k.dato}</span></div>
+          <div style="display:flex;gap:8px;align-items:center">${fBadge}<span style="color:#666;font-size:14px">${isExp?'▲':'▼'}</span></div>
+        </div>
+        <div style="display:flex;gap:4px;height:28px;margin-bottom:8px">${tegnsHtml}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">${pillsHtml}</div>
+      </div>${expHtml}
+    </div>`;
+  }).join('');
+}
+
+// ANALYSE - DAGENS KAMP
+function renderAnalyse(){
+  const nestIdx=fasit.findIndex(f=>!f);
+  const idx=nestIdx>=0?nestIdx:KAMPER.length-1;
+  const kamp=KAMPER[idx];
+  const key=kamp.kamp.replace('–','-');
+  const d=H2H_DATA[key]||H2H_DATA[Object.keys(H2H_DATA).find(k=>H2H_DATA[k].kampIdx===idx)];
+  if(!d){
+    document.getElementById('analyseContent').innerHTML=`<div style="text-align:center;padding:40px"><div style="font-size:36px;margin-bottom:12px">🔬</div><div style="font-weight:700;color:#FFD700;margin-bottom:8px">Analyse for ${kamp.kamp}</div><div style="color:#666;font-size:13px">Kampanalyse legges inn før kampstart (${kamp.dato})</div></div>`;
+    return;
+  }
+  const tips={H:0,U:0,B:0};DT.forEach(dt=>tips[dt.t[d.kampIdx][0]]++);
+  const scores={};DT.forEach(dt=>{const s=dt.t[d.kampIdx][1];if(s)scores[s]=(scores[s]||0)+1});
+  const topS=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const fC=f=>f==='V'?'#1a6b2f':f==='U'?'#7a5c00':'#5c1a1a';
+  const fT=f=>f==='V'?'#90ee90':f==='U'?'#FFD700':'#ff9999';
+  document.getElementById('analyseContent').innerHTML=`
+    <div class="card card-red" style="padding:16px;margin-bottom:12px;text-align:center">
+      <div style="font-size:11px;color:#888;margin-bottom:4px">📅 DAGENS KAMP · ${d.dato} kl. ${d.tid} · 📺 ${d.kanal}</div>
+      <div style="font-size:11px;color:#555;margin-bottom:12px">📍 ${d.stad}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+        <div style="flex:1;text-align:center"><div style="font-size:36px">${d.hF}</div><div style="font-weight:800;font-size:15px;color:#fff;margin-top:4px">${d.home}</div><div style="font-size:12px;color:#FFD700">FIFA #${d.hR}</div></div>
+        <div style="font-size:24px;font-weight:900;color:#444">VS</div>
+        <div style="flex:1;text-align:center"><div style="font-size:36px">${d.aF}</div><div style="font-weight:800;font-size:15px;color:#fff;margin-top:4px">${d.away}</div><div style="font-size:12px;color:#FFD700">FIFA #${d.aR}</div></div>
+      </div>
+    </div>
+    <div class="card card-normal" style="padding:14px;margin-bottom:10px">
+      <div class="section-title">⚔️ HEAD TO HEAD (${d.h2h.tot} kamper)</div>
+      <div style="display:flex;justify-content:space-around;text-align:center;margin-bottom:12px">
+        <div><div style="font-size:26px;font-weight:900;color:#FFD700">${d.h2h.hW}</div><div style="font-size:11px;color:#888">${d.home}</div></div>
+        <div><div style="font-size:26px;font-weight:900;color:#777">${d.h2h.dr}</div><div style="font-size:11px;color:#888">Uavgjort</div></div>
+        <div><div style="font-size:26px;font-weight:900;color:#FFD700">${d.h2h.aW}</div><div style="font-size:11px;color:#888">${d.away}</div></div>
+      </div>
+      <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:12px">
+        <div style="flex:${Math.max(d.h2h.hW,.1)};background:#cc1122"></div>
+        <div style="flex:${Math.max(d.h2h.dr,.1)};background:#555"></div>
+        <div style="flex:${Math.max(d.h2h.aW,.1)};background:#1a3a7a"></div>
+      </div>
+      ${d.h2h.m.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:4px;font-size:13px"><span style="color:#666;width:36px">${m.y}</span><span style="color:#ccc;flex:1;text-align:right">${m.h}</span><span style="font-weight:800;color:#FFD700;font-size:15px;margin:0 12px">${m.s}</span><span style="color:#ccc;flex:1">${m.a}</span><span style="color:#444;font-size:11px">${m.c}</span></div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      ${[[d.hF,d.home,d.hForm,d.hGF,d.hGA,d.kH,d.absH],[d.aF,d.away,d.aForm,d.aGF,d.aGA,d.kA,d.absA]].map(([fl,nm,form,gf,ga,ks,ab])=>`
+        <div class="card card-normal" style="padding:12px">
+          <div style="font-size:11px;color:#6b8f7a;font-weight:700;margin-bottom:8px">${fl} ${nm.toUpperCase()}</div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px">Siste 5:</div>
+          <div style="display:flex;gap:3px;margin-bottom:8px">${form.map(f=>`<div style="width:24px;height:24px;border-radius:4px;background:${fC(f)};color:${fT(f)};font-weight:800;font-size:10px;display:flex;align-items:center;justify-content:center">${f}</div>`).join('')}</div>
+          <div style="font-size:11px;color:#888">⚽ ${gf.toFixed(1)} mål/kamp</div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px">🛡️ ${ga.toFixed(1)} sluppet inn</div>
+          <div style="font-size:11px;color:#FFD700;font-weight:700;margin-bottom:4px">Nøkkelspillere:</div>
+          ${ks.map(p=>`<div style="font-size:11px;color:#ccc;margin-bottom:2px">· ${p}</div>`).join('')}
+          ${ab.length?`<div style="margin-top:6px;font-size:11px;color:#ff9999">🚑 ${ab.join(', ')}</div>`:''}
+        </div>`).join('')}
+    </div>
+    <div class="card card-normal" style="padding:14px;margin-bottom:10px">
+      <div class="section-title">👥 KONKURRANSEN TIPPER (21 deltakere)</div>
+      ${[['H',d.home,'#cc1122'],['U','Uavgjort','#7a6000'],['B',d.away,'#1a3a7a']].map(([t,lbl,bg])=>`
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#ccc">${t} – ${lbl}</span><span style="color:#FFD700;font-weight:700">${tips[t]} pers.</span></div>
+          <div style="background:rgba(0,0,0,.3);border-radius:4px;height:20px;overflow:hidden"><div style="width:${(tips[t]/21)*100}%;height:100%;background:${bg};border-radius:4px;display:flex;align-items:center;padding-left:6px"><span style="font-size:11px;color:#fff;font-weight:700">${Math.round((tips[t]/21)*100)}%</span></div></div>
+        </div>`).join('')}
+      <div style="margin-top:10px"><div style="font-size:11px;color:#888;margin-bottom:6px">Mest tippede scorer:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${topS.map(([s,c],i)=>`<div style="padding:4px 10px;border-radius:20px;background:${i===0?'rgba(255,215,0,.15)':'rgba(255,255,255,.06)'};border:${i===0?'1px solid rgba(255,215,0,.4)':'1px solid rgba(255,255,255,.1)'};display:flex;gap:5px;align-items:center"><span style="font-weight:800;color:${i===0?'#FFD700':'#fff'}">${s}</span><span style="font-size:11px;color:#666">×${c}</span></div>`).join('')}</div></div>
+    </div>
+    <div class="card card-normal" style="padding:14px;margin-bottom:10px">
+      <div class="section-title">📊 SANNSYNLIGHETSANALYSE</div>
+      ${[['H',d.home,d.sH,'#cc1122'],['U','Uavgjort',d.sU,'#7a6000'],['B',d.away,d.sB,'#1a3a7a']].map(([t,lbl,pct,bg])=>`
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#ccc">${t} – ${lbl}</span><span style="color:#FFD700;font-weight:700">${pct}%</span></div>
+          <div style="background:rgba(0,0,0,.3);border-radius:4px;height:8px"><div style="width:${pct}%;height:100%;background:${bg};border-radius:4px"></div></div>
+        </div>`).join('')}
+    </div>
+    <div style="background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.25);border-radius:10px;padding:14px">
+      <div class="section-title">🔬 ANALYSE</div>
+      <div style="font-size:13px;color:#ccc;line-height:1.7;margin-bottom:12px">${d.ana}</div>
+      <div style="background:rgba(255,215,0,.1);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px">
+        <div style="text-align:center"><div style="font-size:11px;color:#888;margin-bottom:2px">Sannsynlig score</div><div style="font-size:30px;font-weight:900;color:#FFD700">${d.ss}</div></div>
+        <div style="flex:1;font-size:13px;color:#FFD700;font-weight:700">🏆 ${d.v}</div>
+      </div>
+    </div>`;
+}
+
+// FUN FACTS
+function renderFun(){
+  const ff=KAMPER.map((k,i)=>{const t={H:0,U:0,B:0};DT.forEach(d=>t[d.t[i][0]]++);const max=Math.max(...Object.values(t));const e=Object.entries(t).find(([_,v])=>v===max);const sp=max-Math.min(...Object.values(t));return{...k,t,e:e[0],a:e[1],sp}});
+  const norgeBlokk=[7,16,20].map(i=>{const k=KAMPER[i];const t={H:0,U:0,B:0};DT.forEach(d=>t[d.t[i][0]]++);
+    const bars=[['H','rgba(144,238,144,.15)','#90ee90'],['U','rgba(255,215,0,.15)','#FFD700'],['B','rgba(255,153,153,.15)','#ff9999']].map(([tg,bg,col])=>`<div style="flex:${t[tg]||.2};background:${bg};border-radius:5px;padding:5px 6px;text-align:center"><div style="font-weight:700;color:${col};font-size:13px">${tg}: ${t[tg]}</div></div>`).join('');
+    return`<div style="margin-bottom:10px"><div style="font-weight:700;color:#fff;margin-bottom:4px;font-size:13px">⚽ ${k.kamp} (${k.dato})</div><div style="display:flex;gap:6px">${bars}</div></div>`;
+  }).join('');
+  document.getElementById('funContent').innerHTML=`
+    <div style="background:rgba(204,17,34,.15);border:1px solid #FFD700;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:800;font-size:15px;color:#FFD700;margin-bottom:10px">⭐ Norges kamper</div>${norgeBlokk}
+    </div>
+    <div class="card card-normal" style="padding:14px;margin-bottom:10px">
+      <div class="section-title">🤝 Mest enige (18+)</div>
+      ${ff.filter(f=>f.a>=18).map(f=>`<div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px"><span style="color:#fff">${f.kamp} (${f.dato})</span><span style="color:#90ee90;font-weight:700">${f.a}/21 tipper ${f.e}</span></div>`).join('')}
+    </div>
+    <div class="card card-normal" style="padding:14px;margin-bottom:10px">
+      <div class="section-title">🎲 Mest uenige</div>
+      ${[...ff].sort((a,b)=>a.sp-b.sp).slice(0,4).map(f=>`<div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px"><span style="color:#fff">${f.kamp} (${f.dato})</span><span style="color:#FFD700;font-weight:700">H:${f.t.H} U:${f.t.U} B:${f.t.B}</span></div>`).join('')}
+    </div>
+    <div class="card card-normal" style="padding:14px">
+      <div class="section-title">🦁 Dristigste tips</div>
+      ${[{n:"Lars Blömacher",t:"Sør-Afrika slår Mexico åpningskampen (K1)",i:"😮"},{n:"Lovedeep Sharma",t:"Egypt slår Belgia 2-1 (K6)",i:"🎰"},{n:"Lovedeep Sharma",t:"Iran slår Belgia (K15)",i:"🎲"},{n:"Håvard Ellingsen",t:"Norge slår Frankrike 2-1 (K21) – eneste!",i:"🦁"},{n:"Vidar Persbraaten",t:"Frankrike–Senegal 4-3 (K7)",i:"🔥"}].map(x=>`<div style="display:flex;gap:8px;margin-bottom:7px;font-size:13px"><span>${x.i}</span><div><span style="color:#FFD700;font-weight:700">${x.n}: </span><span style="color:#ccc">${x.t}</span></div></div>`).join('')}
+    </div>`;
+}
+
+// RACE
+function renderRace(){
+  const sb=scoreboard();const gj=22-spillte();const maks=gj*2;const leder=sb[0]?.p||0;
+  const html=sb.map((d,i)=>{
+    const m=d.p+maks;const eL=i===0;const ute=!eL&&m<leder;const bak=leder-d.p;
+    let st='';
+    if(eL&&gj>0)st=`<span style="color:#FFD700">🏆 Leder · maks ${m}p</span>`;
+    else if(eL)st=`<span style="color:#FFD700">🏆 VINNER!</span>`;
+    else if(ute)st=`<span style="color:#ff6666">❌ Ute · ${bak}p bak</span>`;
+    else if(gj>0)st=`<span style="color:#90ee90">✅ Kan vinne · trenger ${bak}p · maks ${m}p</span>`;
+    else st=`<span style="color:#ff9999">${bak}p bak</span>`;
+    const bar=gj>0?`<div style="margin-top:7px;position:relative;height:6px;background:rgba(0,0,0,.4);border-radius:3px;overflow:hidden"><div style="position:absolute;left:0;top:0;width:${(m/44)*100}%;height:100%;background:${ute?'#3a0000':'rgba(204,17,34,.2)'};border-radius:3px"></div><div style="position:absolute;left:0;top:0;width:${(d.p/44)*100}%;height:100%;background:${eL?'#FFD700':ute?'#3a0000':'#cc1122'};border-radius:3px;transition:width .8s"></div></div>`:'';
+    return`<div style="background:${eL?'rgba(255,215,0,.1)':ute?'rgba(80,0,0,.2)':'rgba(255,255,255,.04)'};border:1px solid ${eL?'#FFD700':ute?'rgba(255,80,80,.2)':'rgba(255,255,255,.08)'};border-radius:10px;margin-bottom:7px;padding:11px 14px;opacity:${ute?.55:1}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;text-align:center;font-size:${eL?20:13}px;color:${ute?'#555':'#fff'}">${eL?'🥇':(i+1)+'.'}</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:13px;color:${eL?'#FFD700':ute?'#777':'#fff'}">${d.n}</div><div style="font-size:11px;margin-top:2px">${st}</div></div>
+        <div style="text-align:right"><div style="font-size:20px;font-weight:900;color:${eL?'#FFD700':ute?'#555':'#fff'}">${d.p}p</div>${gj>0?`<div style="font-size:10px;color:#555">maks ${m}</div>`:''}</div>
+      </div>${bar}
+    </div>`;
+  }).join('');
+  const alive=sb.filter((d,i)=>i===0||d.p+maks>=leder).length;
+  const sum=gj>0?`<div class="card card-normal" style="padding:14px;margin-top:6px"><div style="font-weight:700;color:#FFD700;margin-bottom:6px;font-size:13px">📊 Sammendrag</div><div style="font-size:12px;color:#ccc;line-height:1.9"><div>✅ I spillet: <b style="color:#90ee90">${alive}</b> av 21</div><div>❌ Matematisk ute: <b style="color:#ff9999">${21-alive}</b> av 21</div><div>📅 Kamper igjen: <b style="color:#FFD700">${gj}</b> · Poeng å hente: <b style="color:#FFD700">${maks}</b></div></div></div>`:'';
+  document.getElementById('raceContent').innerHTML=`<div style="text-align:center;margin-bottom:12px;font-size:13px;color:#a8d5b5">${gj===0?'🏁 Konkurransen er over!':`${gj} kamper gjenstår · ${maks} poeng å hente`}</div>${html}${sum}`;
+}
+
+// PLAYER MODAL
+function openPlayer(n){
+  const sb=scoreboard();const d=sb.find(s=>s.n===n);if(!d)return;
+  const rank=sb.findIndex(s=>s.n===n)+1;const sp=spillte();
+  const med=['🥇','🥈','🥉'];const p2=d.det.filter(p=>p===2).length;const p1=d.det.filter(p=>p===1).length;const p0=d.det.filter(p=>p===0).length;
+  const stats=sp>0?`<div style="display:flex;gap:8px;margin-bottom:16px">
+    <div style="flex:1;background:#1a6b2f;border-radius:8px;padding:8px 6px;text-align:center"><div style="font-size:18px">🥇</div><div style="font-size:20px;font-weight:900;color:#90ee90">${p2}</div><div style="font-size:11px;color:#90ee90">2p</div></div>
+    <div style="flex:1;background:#7a5c00;border-radius:8px;padding:8px 6px;text-align:center"><div style="font-size:18px">🥈</div><div style="font-size:20px;font-weight:900;color:#FFD700">${p1}</div><div style="font-size:11px;color:#FFD700">1p</div></div>
+    <div style="flex:1;background:#5c1a1a;border-radius:8px;padding:8px 6px;text-align:center"><div style="font-size:18px">❌</div><div style="font-size:20px;font-weight:900;color:#ff9999">${p0}</div><div style="font-size:11px;color:#ff9999">0p</div></div>
+  </div>`:'';
+  const kamper=KAMPER.map((k,i)=>{const tip=d.t[i];const f=fasit[i];const p=d.det[i];
+    const cls=p===2?'rgba(255,215,0,.1)':p===1?'rgba(204,17,34,.15)':p===0?'rgba(92,26,26,.2)':'rgba(255,255,255,.03)';
+    const fHtml=f?`<div style="text-align:center;min-width:48px;padding:3px 6px;border-radius:5px;font-size:12px;font-weight:700;background:${p===2?'#1a6b2f':p===1?'#7a5c00':'#5c1a1a'};color:${p===2?'#90ee90':p===1?'#FFD700':'#ff9999'}">${f[0]} ${f[1]}</div>`:'';
+    const pCol=p===2?'#90ee90':p===1?'#FFD700':p===0?'#ff6666':'#333';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;margin-bottom:4px;border-radius:7px;background:${cls};border:${k.norge?'1px solid rgba(255,215,0,.3)':'1px solid transparent'}">
+      <div style="width:18px;font-size:11px;color:#555;text-align:right">${i+1}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:${k.norge?700:500};color:${k.norge?'#FFD700':'#ccc'}">${k.norge?'⭐ ':''}${k.kamp}</div><div style="font-size:11px;color:#555">${k.dato}</div></div>
+      <div style="text-align:center;min-width:48px;padding:3px 6px;border-radius:5px;background:rgba(255,255,255,.06);font-size:12px;font-weight:700">${tip[0]} ${tip[1]}</div>
+      ${fHtml}
+      <div style="width:24px;text-align:center;font-size:14px;font-weight:900;color:${pCol}">${p!==null?p:'·'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('playerContent').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="font-size:32px">${rank<=3?med[rank-1]:'#'+rank}</div>
+      <div style="flex:1"><div style="font-weight:900;font-size:17px;color:#FFD700">${d.n}</div><div style="font-size:13px;color:#a8d5b5">${d.p} poeng av ${sp*2} mulige</div></div>
+      <button onclick="closePlayer()" style="background:transparent;border:none;color:#666;font-size:22px;cursor:pointer">✕</button>
+    </div>${stats}
+    <div style="font-size:12px;color:#6b8f7a;font-weight:700;letter-spacing:1px;margin-bottom:8px">KAMP FOR KAMP</div>${kamper}`;
+  document.getElementById('playerModal').classList.add('show');
+}
+function closePlayer(){document.getElementById('playerModal').classList.remove('show')}
+
+// LIVE
+function renderLiveBanner(){
+  const b=document.getElementById('liveBanner');
+  if(!liveState){b.classList.remove('show');return}
+  b.classList.add('show');
+  document.getElementById('liveBannerKamp').textContent='LIVE: '+KAMPER[liveState.kampIdx].kamp;
+  document.getElementById('liveBannerScore').innerHTML=`${liveState.h} – ${liveState.b}${liveState.min?`<span style="font-size:13px;color:#ffaaaa;margin-left:8px">${liveState.min}'</span>`:''}`;
+}
+function handleLiveBtn(i){if(liveState?.kampIdx===i)openLiveEdit();else startLive(i)}
+function startLive(i){const f=fasit[i];liveState={kampIdx:i,h:f?parseInt(f[1]?.split('-')[0])||0:0,b:f?parseInt(f[1]?.split('-')[1])||0:0,min:''};openLiveEdit();updateLiveFasit()}
+function openLiveEdit(){if(!liveState)return;const k=KAMPER[liveState.kampIdx];document.getElementById('liveTitle').textContent='LIVE: '+k.kamp;document.getElementById('liveHomeTeam').textContent=k.kamp.split('–')[0];document.getElementById('liveAwayTeam').textContent=k.kamp.split('–')[1];document.getElementById('liveH').textContent=liveState.h;document.getElementById('liveB').textContent=liveState.b;document.getElementById('liveMin').value=liveState.min||'';document.getElementById('liveModal').classList.add('show')}
+function closeLiveModal(){document.getElementById('liveModal').classList.remove('show')}
+function adj(s,d){if(!liveState)return;liveState[s]=Math.max(0,liveState[s]+d);document.getElementById('live'+s.toUpperCase()).textContent=liveState[s];updateLiveFasit()}
+function updateLiveFasit(){if(!liveState)return;const sc=`${liveState.h}-${liveState.b}`;fasit[liveState.kampIdx]=[tegn(sc),sc];renderLiveBanner();oppdaterAlt()}
+function avsluttLive(){liveState=null;closeLiveModal();oppdaterAlt()}
+function lockCurrent(){if(liveState){locked.add(liveState.kampIdx);avsluttLive()}}
+
+// EDIT
+function openEdit(i){editIdx=i;const f=fasit[i];document.getElementById('editTitle').textContent=KAMPER[i].kamp;document.getElementById('editInput').value=f?`${f[0]} ${f[1]||''}`.trim():'';document.getElementById('editModal').classList.add('show');setTimeout(()=>document.getElementById('editInput').focus(),100)}
+function closeEdit(){document.getElementById('editModal').classList.remove('show');editIdx=null}
+function setTegn(t){const inp=document.getElementById('editInput');const cur=inp.value;const sc=cur.includes(' ')?cur.slice(cur.indexOf(' ')):'';inp.value=t+sc}
+function lagreEdit(){if(editIdx===null)return;fasit[editIdx]=parseVal(document.getElementById('editInput').value);closeEdit();oppdaterAlt()}
+function slettEdit(){if(editIdx!==null){fasit[editIdx]=null;closeEdit();oppdaterAlt()}}
+
+// LOCK & EXP
+function toggleLock(i){if(locked.has(i))locked.delete(i);else{locked.add(i);if(liveState?.kampIdx===i)avsluttLive()};oppdaterAlt()}
+function toggleExp(i){expandedKamp=expandedKamp===i?null:i;renderOdds()}
+
+// INIT
+hentResultater();
+</script>
+</body>
+</html>
